@@ -1,3 +1,7 @@
+.venv/
+outra_pasta
+banco_vetorial/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
