@@ -1,6 +1,6 @@
 .venv/
-outra_pasta
 banco_vetorial/
+src/doxxo/configuracoes/arq_conf.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
