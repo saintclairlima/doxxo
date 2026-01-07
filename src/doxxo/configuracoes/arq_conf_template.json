@@ -1,0 +1,12 @@
+{
+    "config_api": {
+        "url_documentos": "../dados/textos"
+    },
+    "config_banco_vetorial": {
+        "url_banco_vetorial": "../banco_vetorial",
+        "modelo_embeddings": "BAAI/bge-m3",
+        "instrucao_modelo_embeddings": null,
+        "comprimento_maximo_fragmento": 300,
+        "hnsw_space": "cosine"
+    }
+}
