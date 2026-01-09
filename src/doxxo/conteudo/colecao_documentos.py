@@ -49,7 +49,7 @@ class ColecaoDocumentosChromaDB(ColecaoDocumentos):
             self.colecao_documentos = self.banco_vetorial.get_collection(**argumentos_colecao)
         except Exception as excecao:
             if criar_colecao_automaticamente:
-                argumentos_colecao['metadata']['uuid_colecao'] = str(uuid4())
+                argumentos_colecao['metadata'] = {'uuid_colecao': str(uuid4())}
                 if hnsw_space is not None:
                     argumentos_colecao['metadata']['hnsw:space'] = hnsw_space
 
