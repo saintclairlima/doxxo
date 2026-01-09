@@ -1,7 +1,10 @@
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Query
+from fastapi import FastAPI, HTTPException, Request, Query
 from typing import List
+from fastapi.responses import HTMLResponse
+import httpx
+from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 from doxxo.conteudo.banco_vetorial import BancoVetorial
 from doxxo.configuracoes.configuracoes import configuracoes
@@ -36,8 +39,11 @@ async def lifespan(app: FastAPI):
             criar_colecao_automaticamente=False
         )
 
+    cliente_http = httpx.AsyncClient(timeout=60.0)
+
     app.state.gerador_embeddings = gerador_embeddings
     app.state.colecoes_documentos = colecoes
+    app.state.cliente_http = cliente_http
 
     logger.info("API inicializada")
 
@@ -45,6 +51,7 @@ async def lifespan(app: FastAPI):
 
     # Exemplo de código de SHUTDOWN (se necessário)
     logger.info("Desligando e liberando recursos...")
+    await cliente_http.aclose()
     if gerador_embeddings and hasattr(gerador_embeddings.modelo, 'to'):
         gerador_embeddings.modelo.to('cpu') 
         del gerador_embeddings.modelo
@@ -96,3 +103,52 @@ async def consultar_documentos(request: Request, pergunta: str, colecao: List[st
     resultado_completo.sort(key=lambda x: x["distance"])
 
     return resultado_completo[:num_resultados]
+
+class SumarizacaoRequest(BaseModel):
+    consulta: str
+    textos: List[str]
+
+@controller.post('/doxxo/sumarizar')
+async def sumarizar_conteudo(request: Request, conteudo_requisicao: SumarizacaoRequest):
+    conteudo_completo = '\n\n'.join(conteudo_requisicao.textos)
+    prompt = f"Considere a seguinte pergunta/consulta: {conteudo_requisicao.consulta}.\nFaça um resumo conciso do seguinte conteúdo, com foco no contexto da pergunta/consulta:\n\n{conteudo_completo}"
+
+    url_ollama = configuracoes.URL_API_OLLAMA
+    client = request.app.state.cliente_http
+    payload = {
+        "model": "llama3.1",
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "stream": False
+    }
+
+    try:
+        logger.info(f"Enviando solicitação de sumarização para o Ollama (Modelo: llama3.1)")
+        response = await client.post(url_ollama, json=payload)
+        response.raise_for_status()
+        
+        resultado = response.json()
+        return {
+            "resumo": resultado.get("message", {}).get("content", ""),
+            "status": "sucesso"
+        }
+    
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Erro na API Ollama: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao processar sumarização no Ollama")
+    except Exception as e:
+        logger.error(f"Erro inesperado: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@controller.get('/doxxo/documento')
+async def exibir_documento(url_documento: str = Query(None)):
+    with open(f'../{url_documento}', 'r', encoding='utf-8') as arquivo: conteudo_html = arquivo.read()
+    return HTMLResponse(content=conteudo_html, status_code=200)
+    
+@controller.get('/doxxo')
+async def pagina_busca():
+    with open(f'./web/pagina.html', 'r', encoding='utf-8') as arquivo:
+        conteudo_html = arquivo.read()
+        conteudo_html = conteudo_html.replace("TAG_INSERCAO_URL_API", configuracoes.URL_API)
+    return HTMLResponse(content=conteudo_html, status_code=200)

@@ -8,3 +8,5 @@ class ConfiguracoesAPI(ConfiguracoesBase):
         dados_config = kwargs.get('config_api', {})
         
         self.URL_DOCUMENTOS = dados_config['url_documentos']
+        self.URL_API = dados_config['url_api']
+        self.URL_API_OLLAMA = dados_config['url_api_ollama']

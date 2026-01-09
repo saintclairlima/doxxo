@@ -101,7 +101,7 @@
         "indice_documentos": {
             "icms" : {
                 "url": "icms.txt",
-                "titulo": "Decreto Nº 13640 DE 13/11/1997 - Estadual - Rio Grande do Norte",
+                "titulo": "Decreto Nº 13640 DE 13/11/1997",
                 "autor": "Governo do Rio Grande do Norte",
                 "fonte": "documentos/html/ICMS.html",
                 "texto_articulado": true,

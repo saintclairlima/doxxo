@@ -1,6 +1,8 @@
 {
     "config_api": {
-        "url_documentos": "../dados/textos"
+        "url_api": "http://localhost:8000",
+        "url_api_ollama": "http://10.90.0.18:11434/api/chat",
+        "url_documentos": "../documentos/textos"
     },
     "config_banco_vetorial": {
         "url_banco_vetorial": "../banco_vetorial",

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Busca ICMS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        .loading-shimmer { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    </style>
+</head>
+<body class="bg-white text-gray-900">
+
+    <div id="app" class="min-h-screen flex flex-col items-center transition-all duration-500 pt-32">
+        
+        <div id="area-cabecalho" class="text-center mb-8 transition-all duration-500">
+            <h1 class="text-5xl font-bold text-blue-600 tracking-tighter">Busca ICMS</h1>
+        </div>
+
+        <div id="container-busca" class="w-full max-w-2xl px-4 transition-all duration-500">
+            <form class="relative flex items-center" onsubmit="event.preventDefault(); realizarBusca();">
+                <input type="text" id="inputConsulta" placeholder="Digite sua pesquisa sobre ICMS..." 
+                    class="w-full p-4 pl-6 pr-16 text-lg border border-gray-200 rounded-full shadow-sm hover:shadow-md focus:shadow-md focus:outline-none transition-all">
+                <button id="botaoBuscar" type="submit" onclick="realizarBusca()" class="absolute right-4 text-blue-600 hover:scale-110 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </button>
+            </form>
+            
+            <div id="area-acoes" class="hidden mt-4 flex justify-center">
+                <button id="botaoSumarizar" onclick="sumarizarConteudo()" class="flex items-center gap-2 bg-blue-50 text-blue-700 px-6 py-2 rounded-full font-medium hover:bg-blue-100 transition-colors border border-blue-200">
+                    <span>✨</span> Gerar Resumo dos Resultados
+                </button>
+            </div>
+        </div>
+
+        <main id="area-resultados" class="hidden w-full max-w-7xl mt-10 px-6 flex flex-col md:flex-row gap-8 pb-10">
+            
+            <section id="listaResultados" class="flex-1 space-y-6 md:max-h-[70vh] md:overflow-y-auto pr-4 custom-scrollbar"></section>
+
+            <!-- Overlay (só aparece no mobile quando painel aberto) -->
+            <div id="overlaySumarizacao"
+                onclick="fecharPainel()"
+                class="fixed inset-0 bg-black/40 z-40 hidden md:hidden">
+            </div>
+
+            <aside id="painelSumarizacao" class=" fixed md:sticky top-0 md:top-6 right-0 md:right-auto h-full md:h-fit w-[90%] max-w-md md:w-[400px] bg-white md:bg-blue-50/30 border border-blue-100 rounded-none md:rounded-2xl shadow-xl md:shadow-none transform translate-x-full md:translate-x-0 transition-transform duration-300 z-50 md:z-auto p-6 ">
+                
+                <!-- Cabeçalho (só no mobile) -->
+                <div class="flex items-center justify-between mb-4 md:hidden">
+                    <h3 class="font-semibold text-blue-600 uppercase tracking-wider text-sm"> Insights dos Resultados </h3>
+                    <button onclick="fecharPainel()" class="text-gray-500 hover:text-gray-800 text-xl font-bold"> × </button>
+                </div>
+                
+                <!-- Cabeçalho desktop -->
+                <h3 class="hidden md:flex text-sm font-semibold uppercase tracking-wider text-blue-500 mb-4 items-center gap-2"> Insights dos Resultados </h3>
+                
+                <div id="conteudoSumarizacao" class="text-gray-700 leading-relaxed text-sm overflow-y-auto max-h-[70vh]"> Clique em "Gerar Resumo dos Resultados" para receber um resumo baseado nos documentos encontrados. </div>
+            </aside>
+        </main>
+    </div>
+
+    <script>
+        const URL_API = "TAG_INSERCAO_URL_API";
+        let textosRecuperados = [];
+        let buscando = false;
+        let sumarizando = false;
+
+        async function realizarBusca() {
+            if (buscando) return;
+            buscando = true;
+            
+            const pergunta = document.querySelector('#inputConsulta').value;
+            if (!pergunta) return;
+
+            const form = document.querySelector('#formBusca');
+
+            const inputConsulta = document.querySelector('#inputConsulta');
+            inputConsulta.disabled = true;
+
+            const botaoBuscar = document.querySelector('#botaoBuscar');
+            botaoBuscar.disabled = true;
+            botaoBuscar.classList.add('opacity-50', 'cursor-not-allowed');
+
+            const botaoSumarizar = document.querySelector('#botaoSumarizar');
+            botaoSumarizar.disabled = true;
+            botaoSumarizar.classList.add('opacity-50', 'cursor-not-allowed');
+
+            const conteudoSumarizacao = document.querySelector('#conteudoSumarizacao');
+            conteudoSumarizacao.innerHTML = 'Clique em "Gerar Resumo dos Resultados" para receber um resumo baseado nos documentos encontrados.';
+
+            // Ajuste de Layout: Sobe a barra e mostra os resultados
+            document.querySelector('#app').classList.remove('pt-32');
+            document.querySelector('#app').classList.add('pt-10');
+            document.querySelector('#area-cabecalho').classList.add('scale-75', 'mb-2');
+            document.querySelector('#area-resultados').classList.remove('hidden');
+            document.querySelector('#area-acoes').classList.remove('hidden');
+
+            const listaResultados = document.querySelector('#listaResultados');
+            listaResultados.innerHTML = '<div class="space-y-4">' + Array(3).fill('<div class="h-24 w-full loading-shimmer rounded-xl"></div>').join('') + '</div>';
+
+            try {
+                const response = await fetch(`${URL_API}/doxxo/consulta?pergunta=${encodeURIComponent(pergunta)}&num_resultados=20`);
+                const dados = await response.json();                
+                textosRecuperados = dados.map(d => `${d.metadata.titulo} - ${d.metadata.subtitulo}\n${d.document}`);
+                renderizarResultados(dados);
+            } catch (error) {
+                listaResultados.innerHTML = `<p class="text-red-500">Erro ao buscar documentos: ${error.message}</p>`;
+            } finally {
+                inputConsulta.disabled = false;
+                botaoBuscar.disabled = false;
+                botaoBuscar.classList.remove('opacity-50', 'cursor-not-allowed');
+                buscando = false;                
+                botaoSumarizar.disabled = false;
+                botaoSumarizar.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function getFormatoRelevancia(distancia){
+            const base = "p-1 inline-block border rounded";
+            if (distancia <= 0.33) {
+                return { rotulo: "Alta", estilo: `${base} bg-green-100 text-green-800 border-green-200` };
+            } else if (distancia <= 0.66) {
+                return { rotulo: "Média", estilo: `${base} bg-yellow-100 text-yellow-800 border-yellow-200` };
+            } else {
+                return { rotulo: "Baixa", estilo: `${base} bg-red-100 text-red-800 border-red-200` };
+            }
+        }
+
+        function renderizarResultados(dados) {
+            const listaResultados = document.querySelector('#listaResultados');
+            listaResultados.innerHTML = dados.map(item => {
+                const {rotulo, estilo} = getFormatoRelevancia(item.distance);
+                return `
+                    <div class="p-5 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
+                        <div class="flex items-center gap-2 mb-2 text-xs font-medium text-gray-400">
+                            <span class="bg-gray-100 px-2 py-1 rounded capitalize">${item.metadata.colecao}</span>
+                            <span class="${estilo}">Relevância: ${rotulo}</span>
+                        </div>
+                        <h4 class="text-lg font-semibold text-blue-800 mb-2">
+                            <a href="${URL_API}/doxxo/documento?url_documento=${item.metadata.fonte}" target="_blank">
+                            ${item.metadata.titulo} - ${item.metadata.subtitulo}</h4>
+                        <p class="text-gray-600 text-sm line-clamp-3">${item.document}</p>
+                    </div>`
+            }).join('');
+        }
+
+        async function sumarizarConteudo() {
+            if (sumarizando || textosRecuperados.length === 0) return;
+            sumarizando = true;
+            abrirPainel();
+
+            const botaoSumarizar = document.querySelector('#botaoSumarizar');
+            botaoSumarizar.disabled = true;
+            botaoSumarizar.classList.add('opacity-50', 'cursor-not-allowed');
+            const consulta = document.querySelector('#inputConsulta').value;
+            const painelSumarizacao = document.querySelector('#painelSumarizacao');
+            const conteudoSumarizacao = document.querySelector('#conteudoSumarizacao');
+
+            const loadingHTML = `
+                <div class="space-y-2">
+                    <div class="h-4 w-full loading-shimmer rounded"></div>
+                    <div class="h-4 w-5/6 loading-shimmer rounded"></div>
+                    <div class="h-4 w-4/6 loading-shimmer rounded"></div>
+                </div>
+            `;
+            conteudoSumarizacao.innerHTML = loadingHTML;
+
+            try {
+                const response = await fetch(`${URL_API}/doxxo/sumarizar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        consulta: consulta,
+                        textos: textosRecuperados
+                    })
+                });
+
+                const data = await response.json();
+                const resumoHTML = `
+                    <div class="prose prose-sm max-w-none">
+                        ${data.resumo.replace(/\n/g, '<br>')}
+                    </div>
+                `;
+                conteudoSumarizacao.innerHTML = resumoHTML;
+
+            } catch (error) {
+                const erroHTML = `<p class="text-red-500 text-xs italic">Erro ao gerar resumo.</p>`;
+                conteudoSumarizacao.innerHTML = erroHTML;
+            } finally {
+                sumarizando = false;
+                botaoSumarizar.disabled = false;
+                botaoSumarizar.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function abrirPainel() {
+            const painel = document.querySelector('#painelSumarizacao');
+            const overlay = document.querySelector('#overlaySumarizacao');
+            painel.classList.remove('translate-x-full');
+            overlay.classList.remove('hidden');
+        }
+
+        function fecharPainel() {
+            const painel = document.querySelector('#painelSumarizacao');
+            const overlay = document.querySelector('#overlaySumarizacao');
+            painel.classList.add('translate-x-full');
+            overlay.classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
