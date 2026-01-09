@@ -146,6 +146,13 @@ async def exibir_documento(url_documento: str = Query(None)):
     with open(f'../{url_documento}', 'r', encoding='utf-8') as arquivo: conteudo_html = arquivo.read()
     return HTMLResponse(content=conteudo_html, status_code=200)
     
+@controller.get('/')
+async def home():
+    with open(f'./web/pagina.html', 'r', encoding='utf-8') as arquivo:
+        conteudo_html = arquivo.read()
+        conteudo_html = conteudo_html.replace("TAG_INSERCAO_URL_API", configuracoes.URL_API)
+    return HTMLResponse(content=conteudo_html, status_code=200)
+
 @controller.get('/doxxo')
 async def pagina_busca():
     with open(f'./web/pagina.html', 'r', encoding='utf-8') as arquivo:
