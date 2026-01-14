@@ -116,10 +116,10 @@
                 "versao": "2022-10-18"
             },
             "icms_regulamento" : {
-                "url": "icms_regulamento.txt",
+                "url": "icms_regulamento_2022.txt",
                 "titulo": "Decreto Nº 31825/2022",
                 "autor": "Governo do Rio Grande do Norte",
-                "fonte": "documentos/html/icms_regulamento.html",
+                "fonte": "documentos/html/icms_regulamento_2022.html",
                 "texto_articulado": true,
                 "versao": "2025-12-30"
             }
