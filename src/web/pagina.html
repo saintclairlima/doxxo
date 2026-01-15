@@ -99,7 +99,7 @@
             listaResultados.innerHTML = '<div class="space-y-4">' + Array(3).fill('<div class="h-24 w-full loading-shimmer rounded-xl"></div>').join('') + '</div>';
 
             try {
-                const response = await fetch(`${URL_API}/doxxo/consulta?pergunta=${encodeURIComponent(pergunta)}&num_resultados=20&colecao=icms`);
+                const response = await fetch(`${URL_API}/doxxo/consulta?pergunta=${encodeURIComponent(pergunta)}&num_resultados=20&rerankear=true&colecao=icms`);
                 const dados = await response.json();                
                 textosRecuperados = dados.map(d => `${d.metadata.titulo} - ${d.metadata.subtitulo}\n${d.document}`);
                 renderizarResultados(dados);
@@ -133,7 +133,7 @@
                     <div class="p-5 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
                         <div class="flex items-center gap-2 mb-2 text-xs font-medium text-gray-400">
                             <span class="bg-gray-100 px-2 py-1 rounded capitalize">${item.metadata.colecao}</span>
-                            <span class="${estilo}">Relevância: ${rotulo} (${((1 - item.distance) * 100).toFixed(1)}%)</span>
+                            <span class="${estilo}">Relevância: ${rotulo} (${((1 - item.distance) * 100).toFixed(1)}% - ${item.rerank_score})</span>
                         </div>
                         <h4 class="text-lg font-semibold text-blue-800 mb-2">
                             <a href="${URL_API}/doxxo/documento?url_documento=${item.metadata.fonte}" target="_blank">
