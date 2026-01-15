@@ -99,7 +99,7 @@
             listaResultados.innerHTML = '<div class="space-y-4">' + Array(3).fill('<div class="h-24 w-full loading-shimmer rounded-xl"></div>').join('') + '</div>';
 
             try {
-                const response = await fetch(`${URL_API}/doxxo/consulta?pergunta=${encodeURIComponent(pergunta)}&num_resultados=20`);
+                const response = await fetch(`${URL_API}/doxxo/consulta?pergunta=${encodeURIComponent(pergunta)}&num_resultados=20&colecao=icms`);
                 const dados = await response.json();                
                 textosRecuperados = dados.map(d => `${d.metadata.titulo} - ${d.metadata.subtitulo}\n${d.document}`);
                 renderizarResultados(dados);
