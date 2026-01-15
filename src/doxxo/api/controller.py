@@ -9,6 +9,7 @@ from starlette.middleware.cors import CORSMiddleware
 from doxxo.conteudo.banco_vetorial import BancoVetorial
 from doxxo.configuracoes.configuracoes import configuracoes
 import logging
+from doxxo.conteudo.reranqueador import ReRanqueador
 
 banco_vetorial = BancoVetorial(
     url_base_documentos=configuracoes.URL_DOCUMENTOS,
@@ -30,6 +31,11 @@ async def lifespan(app: FastAPI):
         nome_modelo=configuracoes.MODELO_EMBEDDINGS
     )
 
+    logger.info("Carregando ReRanqueador...")
+    reranker = ReRanqueador(
+        nome_modelo=configuracoes.MODELO_RERANKEAMENTO
+    )
+
     logger.info("Carregando interface ChromaDB...")
     for nome_colecao in banco_vetorial.listar_nomes_colecoes():
         colecoes[nome_colecao] = banco_vetorial.conectar_colecao_documentos(
@@ -42,6 +48,7 @@ async def lifespan(app: FastAPI):
     cliente_http = httpx.AsyncClient(timeout=60.0)
 
     app.state.gerador_embeddings = gerador_embeddings
+    app.state.reranker = reranker
     app.state.colecoes_documentos = colecoes
     app.state.cliente_http = cliente_http
 
@@ -55,6 +62,10 @@ async def lifespan(app: FastAPI):
     if gerador_embeddings and hasattr(gerador_embeddings.modelo, 'to'):
         gerador_embeddings.modelo.to('cpu') 
         del gerador_embeddings.modelo
+    if reranker and hasattr(reranker.modelo, 'to'):
+        reranker.modelo.to('cpu') 
+        del reranker.modelo
+    logger.info("Recursos liberados com sucesso.")
 
 logger.info('Instanciando a api (FastAPI)...')
 controller = FastAPI(lifespan=lifespan)
@@ -72,7 +83,7 @@ async def chat_health():
     return {"status": "ok"}
 
 @controller.get('/doxxo/consulta')
-async def consultar_documentos(request: Request, pergunta: str, colecao: List[str]| None = Query(None), num_resultados: int = 5):
+async def consultar_documentos(request: Request, pergunta: str, colecao: List[str]| None = Query(None), num_resultados: int = 5, reranquear: bool=True):
 
     if colecao is None or len(colecao) == 0:
         colecoes = list(request.app.state.colecoes_documentos.keys())
@@ -100,7 +111,10 @@ async def consultar_documentos(request: Request, pergunta: str, colecao: List[st
                 "distance": dists[i],
             })
 
-    resultado_completo.sort(key=lambda x: x["distance"])
+    if reranquear:
+        resultado_completo = request.app.state.reranker.reranquear(consulta=pergunta, documentos=resultado_completo)
+    else:
+        resultado_completo.sort(key=lambda x: x["distance"])
 
     return resultado_completo[:num_resultados]
 

@@ -40,7 +40,7 @@ class GeradorEmbeddings(EmbeddingFunction):
         self.instrucao_modelo_embeddings = instrucao
 
         # Carrega modelo pré-treinado com remote code trust habilitado
-        if fazer_log: logger.info(f'Carregando modelo de embeddings "{nome_modelo}" no dispositivo "{self.device}"...')
+        if fazer_log: logger.info(f'Carregando modelo de embeddings ("{self.nome_modelo}" - "{self.device}")...')
         self.modelo = classe_modelo(nome_modelo, device=self.device, cache_folder=url_cache_modelos, trust_remote_code=trust_remote_code)
         self.modelo.to(self.device)
         self.instrucao = instrucao

@@ -9,6 +9,8 @@
         "modelo_embeddings": "BAAI/bge-m3",
         "instrucao_modelo_embeddings": null,
         "comprimento_maximo_fragmento": 300,
-        "hnsw_space": "cosine"
+        "hnsw_space": "cosine",
+
+        "modelo_reranqueamento": "BAAI/bge-reranker-v2-m3"
     }
 }

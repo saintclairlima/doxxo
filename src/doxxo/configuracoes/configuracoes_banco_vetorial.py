@@ -13,4 +13,6 @@ class ConfiguracoesBancoVetorial(ConfiguracoesBase):
         self.COMPRIMENTO_MAXIMO_FRAGMENTO = dados_config['comprimento_maximo_fragmento']
         self.HNSW_SPACE = dados_config['hnsw_space']
 
+        self.MODELO_RERANKEAMENTO = dados_config['modelo_reranqueamento']
+
         
