@@ -1,4 +1,6 @@
 echo "Instalando dependências..."
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cu130
 pip install -r requirements.txt
 cd src
 echo "Configurando ambiente da aplicação e banco de dados vetorial..."
