@@ -10,7 +10,7 @@
         "instrucao_modelo_embeddings": null,
         "comprimento_maximo_fragmento": 300,
         "hnsw_space": "cosine",
-
+        "modelo_reranqueamento_leve": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
         "modelo_reranqueamento": "BAAI/bge-reranker-v2-m3"
     }
 }

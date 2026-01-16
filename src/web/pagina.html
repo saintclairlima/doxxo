@@ -54,7 +54,7 @@
                     </div>
                 </div>
 
-                <button id="botaoExpandirResumo" onclick="toggleResumo()" class="hidden mt-4 text-sm text-blue-600 hover:underline">
+                <button id="botaoExpandirResumo" onclick="toggleResumoExpandido()" class="hidden mt-4 text-sm text-blue-600 hover:underline">
                     Mostrar mais
                 </button>
             </section>
@@ -76,6 +76,7 @@
         async function realizarBusca() {
             if (buscando) return;
             buscando = true;
+            exibirConteudoSumarizacaoCarregando();
             
             const pergunta = document.querySelector('#inputConsulta').value;
             if (!pergunta) return;
@@ -99,7 +100,7 @@
             listaResultados.innerHTML = '<div class="space-y-4">' + Array(3).fill('<div class="h-24 w-full loading-shimmer rounded-xl"></div>').join('') + '</div>';
 
             try {
-                const response = await fetch(`${URL_API}/doxxo/consulta?pergunta=${encodeURIComponent(pergunta)}&num_resultados=20&rerankear=true&colecao=icms`);
+                const response = await fetch(`${URL_API}/doxxo/consulta?pergunta=${encodeURIComponent(pergunta)}&num_resultados=20&reranquear=true&colecao=icms`);
                 const dados = await response.json();                
                 textosRecuperados = dados.map(d => `${d.metadata.titulo} - ${d.metadata.subtitulo}\n${d.document}`);
                 renderizarResultados(dados);
@@ -116,9 +117,9 @@
 
         function getFormatoRelevancia(distancia){
             const base = "p-1 inline-block border rounded";
-            if (distancia <= 0.33) {
+            if (distancia >= 0.6) {
                 return { rotulo: "Alta", estilo: `${base} bg-green-100 text-green-800 border-green-200` };
-            } else if (distancia <= 0.66) {
+            } else if (distancia >= 0.4) {
                 return { rotulo: "Média", estilo: `${base} bg-yellow-100 text-yellow-800 border-yellow-200` };
             } else {
                 return { rotulo: "Baixa", estilo: `${base} bg-red-100 text-red-800 border-red-200` };
@@ -128,12 +129,13 @@
         function renderizarResultados(dados) {
             const listaResultados = document.querySelector('#listaResultados');
             listaResultados.innerHTML = dados.map(item => {
-                const {rotulo, estilo} = getFormatoRelevancia(item.distance);
+                const score = item.rerank_score ? item.rerank_score : (1-item.distance)               
+                const {rotulo, estilo} = getFormatoRelevancia(score);                
                 return `
                     <div class="p-5 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
                         <div class="flex items-center gap-2 mb-2 text-xs font-medium text-gray-400">
                             <span class="bg-gray-100 px-2 py-1 rounded capitalize">${item.metadata.colecao}</span>
-                            <span class="${estilo}">Relevância: ${rotulo} (${((1 - item.distance) * 100).toFixed(1)}% - ${item.rerank_score})</span>
+                            <span class="${estilo}">Relevância: ${rotulo} (${(score * 100).toFixed(1)}%)</span>
                         </div>
                         <h4 class="text-lg font-semibold text-blue-800 mb-2">
                             <a href="${URL_API}/doxxo/documento?url_documento=${item.metadata.fonte}" target="_blank">
@@ -143,24 +145,38 @@
             }).join('');
         }
 
-        async function sumarizarConteudo() {
-            if (sumarizando || textosRecuperados.length === 0) return;
-            sumarizando = true;
-            const consulta = document.querySelector('#inputConsulta').value;            
-            const conteudoSumarizacao = document.querySelector('#conteudoSumarizacao');
+        function exibirConteudoSumarizacaoCarregando() {
             const rotuloSumarizacao = document.querySelector('#rotuloSumarizacao');
             rotuloSumarizacao.textContent = "✨ Sumarizando resultados com IA ";
-
-            const botaoExpandir = document.querySelector('#botaoExpandirResumo');
-
-                conteudoSumarizacao.innerHTML = `
+            const conteudoSumarizacao = document.querySelector('#conteudoSumarizacao');
+            conteudoSumarizacao.innerHTML = `
                     <div class="space-y-2">
                         <div class="h-4 w-full loading-shimmer rounded"></div>
                         <div class="h-4 w-5/6 loading-shimmer rounded"></div>
                         <div class="h-4 w-4/6 loading-shimmer rounded"></div>
                     </div>
                 `;
-                botaoExpandir.classList.add('hidden');
+            const botaoExpandir = document.querySelector('#botaoExpandirResumo');
+            botaoExpandir.classList.add('hidden');
+        }
+
+        function atualizarConteudoSumarizacao(conteudoSumarizado) {
+            const rotuloSumarizacao = document.querySelector('#rotuloSumarizacao');
+            rotuloSumarizacao.textContent = "✨ Insights dos Resultados (gerado por IA)";
+            const conteudoSumarizacao = document.querySelector('#conteudoSumarizacao');
+            conteudoSumarizacao.innerHTML = conteudoSumarizado;
+            const botaoExpandir = document.querySelector('#botaoExpandirResumo');
+            botaoExpandir.textContent = "Mostrar mais";
+            botaoExpandir.classList.remove('hidden');
+            resumoExpandido = false;
+        }
+
+        async function sumarizarConteudo() {
+            if (sumarizando || textosRecuperados.length === 0) return;
+            sumarizando = true;
+            
+            const consulta = document.querySelector('#inputConsulta').value;
+            exibirConteudoSumarizacaoCarregando();
 
             try {
                 const response = await fetch(`${URL_API}/doxxo/sumarizar`, {
@@ -174,18 +190,12 @@
 
                 const data = await response.json();
                 resumoCompleto = data.resumo || "";
-
-                // renderiza versão truncada
-                rotuloSumarizacao.textContent = "✨ Insights dos Resultados (gerado por IA)";
-                conteudoSumarizacao.innerHTML = `
+                resumoCompleto = `
                     <div id="textoResumo" class="text-sm text-gray-700 leading-relaxed resumo-truncado">
                         ${resumoCompleto.replace(/\n/g, "<br>")}
                     </div>
                 `;
-
-                botaoExpandir.textContent = "Mostrar mais";
-                botaoExpandir.classList.remove('hidden');
-                resumoExpandido = false;
+                atualizarConteudoSumarizacao(resumoCompleto);
 
             } catch (error) {
                 const erroHTML = `<p class="text-red-500 text-xs italic">Erro ao gerar resumo.</p>`;
@@ -195,7 +205,7 @@
             }
         }
 
-        function toggleResumo() {
+        function toggleResumoExpandido() {
             const textoResumo = document.querySelector('#textoResumo');
             const botaoExpandir = document.querySelector('#botaoExpandirResumo');
 

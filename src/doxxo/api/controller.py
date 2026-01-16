@@ -109,6 +109,7 @@ async def consultar_documentos(request: Request, pergunta: str, colecao: List[st
                 "document": docs[i],
                 "metadata": {**metas[i], 'colecao': colecao},
                 "distance": dists[i],
+                "score_reranqueamento": None
             })
 
     if reranquear:
@@ -125,7 +126,7 @@ class SumarizacaoRequest(BaseModel):
 @controller.post('/doxxo/sumarizar')
 async def sumarizar_conteudo(request: Request, conteudo_requisicao: SumarizacaoRequest):
     conteudo_completo = '\n\n'.join(conteudo_requisicao.textos)
-    prompt = f"Considere a seguinte pergunta/consulta: {conteudo_requisicao.consulta}.\nFaça um resumo conciso do seguinte conteúdo, com foco no contexto da pergunta/consulta:\n\n{conteudo_completo}"
+    prompt = f"Considere os seguintes termos de consulta: {conteudo_requisicao.consulta}.\nFaça um resumo conciso do seguinte conteúdo, com foco no contexto da consulta:\n\n{conteudo_completo}"
 
     url_ollama = configuracoes.URL_API_OLLAMA
     client = request.app.state.cliente_http

@@ -42,6 +42,5 @@ class ReRanqueador:
         documentos.sort(key=lambda x: x['rerank_score'], reverse=True)
 
         scores = list(self.modelo.predict(pares))
-        print(min(scores), max(scores), sum(scores)/len(scores))
         
         return documentos
