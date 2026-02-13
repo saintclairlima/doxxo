@@ -19,5 +19,42 @@
                 "versao": "2025-12-30"
             }
         }
+    },
+    {
+        "colecao": "referencias_cruzadas",
+        "indice_documentos": {
+            "codigo_etica_camara" : {
+                "url": "codigo_etica_camara.txt",
+                "titulo": "Código de Ética da Câmara de Deputados",
+                "autor": "Câmara de Deputados",
+                "fonte": "documentos/html/codigo_etica_camara.html",
+                "texto_articulado": true,
+                "versao": "2025-04-10"
+            },
+            "regimento_interno_camara" : {
+                "url": "regimento_interno_camara.txt",
+                "titulo": "Regimento Interno da Câmara de Deputados",
+                "autor": "Câmara de Deputados",
+                "fonte": "documentos/html/regimento_interno_camara.html",
+                "texto_articulado": true,
+                "versao": "2025-04-10"
+            },
+            "regimento_interno_senado" : {
+                "url": "regimento_interno_senado.txt",
+                "titulo": "Regimento Interno do Senado Federal",
+                "autor": "Senado Federal",
+                "fonte": "documentos/html/regimento_interno_senado.html",
+                "texto_articulado": true,
+                "versao": "2025-08-22"
+            },
+            "constituicao_estadual" : {
+                "url": "constituicao_estadual.txt",
+                "titulo": "Constituição do Estado do Rio Grande do Norte",
+                "autor": "Governo do Estado do Rio Grande do Norte",
+                "fonte": "documentos/html/constituicao_estadual.html",
+                "texto_articulado": true,
+                "versao": "2024-03-06"
+            }
+        }
     }
 ]
