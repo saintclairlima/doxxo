@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Referenciador</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root{
+            --color-primary: #19793b; /* verde escuro */
+            --color-primary-2: #86c68d; /* verde claro */
+            --color-muted: #8aafa0; /* teal suave */
+            --color-light: #ced7ca; /* background claro */
+            --color-dark: #161514; /* quase preto */
+        }
+
+        /* Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-light); border-radius: 10px; }
+
+        /* Layout helpers */
+        .resumo-truncado { max-height: 8.5rem; /* ~5 linhas */ overflow: hidden; position: relative; }
+        .resumo-truncado::after { content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 3rem; background: linear-gradient(to top, white, transparent); }
+
+        /* Shimmer */
+        .loading-shimmer { background: linear-gradient(90deg, #f6f7f6 25%, #e9efe8 50%, #f6f7f6 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* Paleta: sobrescrever classes Tailwind usadas no projeto para respeitar a paleta */
+        body { background: var(--color-light); color: var(--color-dark); }
+
+        /* Textos */
+        .text-blue-600, .text-blue-500, .text-blue-700 { color: var(--color-primary) !important; }
+        .text-blue-800 { color: var(--color-dark) !important; }
+        .text-gray-600, .text-gray-700, .text-gray-900, .text-gray-400 { color: rgba(22,21,20,0.85) !important; }
+
+        /* Backgrounds / borders */
+        .bg-blue-600, .bg-blue-700 { background-color: var(--color-primary) !important; color: var(--color-light) !important; }
+        .bg-blue-50 { background-color: rgba(25,121,59,0.06) !important; }
+        .bg-blue-100 { background-color: rgba(25,121,59,0.12) !important; }
+        .border-blue-100, .border-blue-200 { border-color: rgba(25,121,59,0.18) !important; }
+
+        .bg-gray-100, .bg-white { background: #ffffff !important; }
+        .border-gray-100, .border-gray-200 { border-color: rgba(0,0,0,0.06) !important; }
+
+        /* Relevância: classes customizadas que usam a paleta */
+        .relevancia-alta { background: rgba(134,198,141,0.16); color: var(--color-primary); border-color: rgba(134,198,141,0.28); }
+        .relevancia-media { background: rgba(138,175,160,0.12); color: var(--color-muted); border-color: rgba(138,175,160,0.22); }
+        .relevancia-baixa { background: rgba(22,21,20,0.04); color: var(--color-dark); border-color: rgba(22,21,20,0.08); }
+    </style>
+</head>
+<body class="bg-white text-gray-900">
+
+    <div id="app" class="min-h-screen flex flex-col items-center transition-all duration-500 pt-32">
+        
+        <div id="area-cabecalho" class="text-center mb-8 transition-all duration-500">
+            <h1 class="text-5xl font-bold text-blue-600 tracking-tighter">Referenciador</h1>
+        </div>
+
+        <div id="container-busca" class="w-full max-w-2xl px-4 transition-all duration-500">
+            <form id="formBusca" class="w-full" onsubmit="event.preventDefault(); realizarBusca();">
+                <div class="relative">
+                    <textarea 
+                        id="inputConsulta"
+                        placeholder="Digite ou cole o texto para buscar referências cruzadas"
+                        class="w-full p-6 pr-16 text-lg border border-gray-200 rounded-2xl shadow-sm 
+                            focus:outline-none focus:ring-2 focus:ring-blue-500 
+                            focus:border-blue-500 transition-all resize-none"
+                    ></textarea>
+                </div>
+                <div class="flex justify-end mt-4">
+                    <button 
+                        id="botaoBuscar"
+                        type="submit"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-full 
+                            hover:bg-blue-700 active:scale-95 transition-all shadow-sm">
+                        Buscar Referências
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <main id="area-resultados"
+            class="hidden w-full max-w-4xl mt-10 px-6 flex flex-col gap-6 pb-10">
+
+            <!-- Card de sumarização -->
+            <section id="area-sumarizacao"
+                class="p-6 border border-gray-100 rounded-xl shadow-sm bg-white
+                    hover:bg-gray-50 transition-colors hidden">
+
+                <div class="flex items-center gap-2 mb-3 text-xs font-medium text-gray-400">
+                    <h3 id="rotuloSumarizacao" class="font-semibold text-blue-800 uppercase tracking-wider text-sm"> ✨ Sumarizando resultados com IA </h3>
+                </div>
+
+                <div id="conteudoSumarizacao">
+                    <div class="space-y-2">
+                        <div class="h-4 w-full loading-shimmer rounded"></div>
+                        <div class="h-4 w-5/6 loading-shimmer rounded"></div>
+                        <div class="h-4 w-4/6 loading-shimmer rounded"></div>
+                    </div>
+                </div>
+
+                <button id="botaoExpandirResumo" onclick="toggleResumoExpandido()" class="hidden mt-4 text-sm text-blue-600 hover:underline">
+                    Mostrar mais
+                </button>
+            </section>
+
+            <!-- Lista de resultados -->
+            <section id="listaResultados" class="space-y-6 custom-scrollbar"></section>
+        </main>
+    </div>
+
+    <script>
+        const URL_API = "TAG_INSERCAO_URL_API";
+        let textosRecuperados = [];
+        let buscando = false;
+        let sumarizando = false;
+
+        let resumoCompleto = "";
+        let resumoExpandido = false;
+
+        // Ajusta automaticamente a altura do textarea conforme conteúdo é digitado
+        const textarea = document.getElementById('inputConsulta');
+        textarea.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+
+        textarea.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey && e.key === 'Enter') ||
+                (e.shiftKey && e.key === 'Enter')) {
+                realizarBusca();
+            }
+        });
+
+        async function realizarBusca() {
+            if (buscando) return;
+            buscando = true;
+            
+            const pergunta = document.querySelector('#inputConsulta').value;
+            if (!pergunta) return;
+
+            const form = document.querySelector('#formBusca');
+
+            const inputConsulta = document.querySelector('#inputConsulta');
+            inputConsulta.disabled = true;
+
+            const botaoBuscar = document.querySelector('#botaoBuscar');
+            botaoBuscar.disabled = true;
+            botaoBuscar.classList.add('opacity-50', 'cursor-not-allowed');
+
+            // Ajuste de Layout: Sobe a barra e mostra os resultados
+            document.querySelector('#app').classList.remove('pt-32');
+            document.querySelector('#app').classList.add('pt-10');
+            document.querySelector('#area-cabecalho').classList.add('scale-75', 'mb-2');
+            document.querySelector('#area-resultados').classList.remove('hidden');
+
+            const listaResultados = document.querySelector('#listaResultados');
+            listaResultados.innerHTML = '<div class="space-y-4">' + Array(3).fill('<div class="h-24 w-full loading-shimmer rounded-xl"></div>').join('') + '</div>';
+
+            try {
+                const response = await fetch(`${URL_API}/doxxo/consulta?pergunta=${encodeURIComponent(pergunta)}&num_resultados=20&reranquear=false&colecao=referencias_cruzadas`);
+                const dados = await response.json();                
+                textosRecuperados = dados.map(d => `${d.metadata.titulo} - ${d.metadata.subtitulo}\n${d.document}`);
+                renderizarResultados(dados);
+            } catch (error) {
+                listaResultados.innerHTML = `<p class="text-red-500">Erro ao buscar documentos: ${error.message}</p>`;
+            } finally {
+                inputConsulta.disabled = false;
+                botaoBuscar.disabled = false;
+                botaoBuscar.classList.remove('opacity-50', 'cursor-not-allowed');
+                buscando = false;  
+            }
+        }
+
+        function getFormatoRelevancia(distancia){
+            const base = "p-1 inline-block border rounded";
+            if (distancia >= 0.6) {
+                return { rotulo: "Alta", estilo: `${base} relevancia-alta` };
+            } else if (distancia >= 0.4) {
+                return { rotulo: "Média", estilo: `${base} relevancia-media` };
+            } else {
+                return { rotulo: "Baixa", estilo: `${base} relevancia-baixa` };
+            }
+        }
+
+        function renderizarResultados(dados) {
+            const listaResultados = document.querySelector('#listaResultados');
+            listaResultados.innerHTML = dados.map((item, idx) => {
+                const score = item.rerank_score ? item.rerank_score : (1-item.distance)
+                const {rotulo, estilo} = getFormatoRelevancia(score);
+                return `
+                    <div class="p-5 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
+                        <div class="flex items-center gap-2 mb-2 text-xs font-medium text-gray-400">
+                            <span class="bg-gray-100 px-2 py-1 rounded capitalize">${item.metadata.colecao}</span>
+                            <span class="${estilo}">Relevância: ${rotulo} (${(score * 100).toFixed(1)}%)</span>
+                        </div>
+                        <h4 class="text-lg font-semibold text-blue-800 mb-2">
+                            <a href="${URL_API}/doxxo/documento?url_documento=${item.metadata.fonte}" target="_blank">
+                            ${item.metadata.titulo} - ${item.metadata.subtitulo}</a></h4>
+                        <div id="textoResultado-${idx}" class="text-gray-600 text-sm resumo-truncado">${item.document}</div>
+                        <button id="botaoExpandirResultado-${idx}" onclick="toggleResultadoExpandido(${idx})" class="mt-2 text-sm text-blue-600 hover:underline">Mostrar mais</button>
+                    </div>`
+            }).join('');
+        }
+
+        function exibirConteudoSumarizacaoCarregando() {
+            const rotuloSumarizacao = document.querySelector('#rotuloSumarizacao');
+            rotuloSumarizacao.textContent = "✨ Sumarizando resultados com IA ";
+            const conteudoSumarizacao = document.querySelector('#conteudoSumarizacao');
+            conteudoSumarizacao.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="h-4 w-full loading-shimmer rounded"></div>
+                        <div class="h-4 w-5/6 loading-shimmer rounded"></div>
+                        <div class="h-4 w-4/6 loading-shimmer rounded"></div>
+                    </div>
+                `;
+            const botaoExpandir = document.querySelector('#botaoExpandirResumo');
+            botaoExpandir.classList.add('hidden');
+        }
+
+        function atualizarConteudoSumarizacao(conteudoSumarizado) {
+            const rotuloSumarizacao = document.querySelector('#rotuloSumarizacao');
+            rotuloSumarizacao.textContent = "✨ Insights dos Resultados (gerado por IA)";
+            const conteudoSumarizacao = document.querySelector('#conteudoSumarizacao');
+            conteudoSumarizacao.innerHTML = conteudoSumarizado;
+            const botaoExpandir = document.querySelector('#botaoExpandirResumo');
+            botaoExpandir.textContent = "Mostrar mais";
+            botaoExpandir.classList.remove('hidden');
+            resumoExpandido = false;
+        }
+
+        async function sumarizarConteudo() {
+            if (sumarizando || textosRecuperados.length === 0) return;
+            sumarizando = true;
+            
+            const consulta = document.querySelector('#inputConsulta').value;
+            exibirConteudoSumarizacaoCarregando();
+
+            try {
+                const response = await fetch(`${URL_API}/doxxo/sumarizar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        consulta: consulta,
+                        textos: textosRecuperados
+                    })
+                });
+
+                const data = await response.json();
+                resumoCompleto = data.resumo || "";
+                resumoCompleto = `
+                    <div id="textoResumo" class="text-sm text-gray-700 leading-relaxed resumo-truncado">
+                        ${resumoCompleto.replace(/\n/g, "<br>")}
+                    </div>
+                `;
+                atualizarConteudoSumarizacao(resumoCompleto);
+
+            } catch (error) {
+                const erroHTML = `<p class="text-red-500 text-xs italic">Erro ao gerar resumo.</p>`;
+                conteudoSumarizacao.innerHTML = erroHTML;
+            } finally {
+                sumarizando = false;
+            }
+        }
+
+        function toggleResumoExpandido() {
+            const textoResumo = document.querySelector('#textoResumo');
+            const botaoExpandir = document.querySelector('#botaoExpandirResumo');
+
+            if (!textoResumo) return;
+
+            resumoExpandido = !resumoExpandido;
+
+            if (resumoExpandido) {
+                textoResumo.classList.remove('resumo-truncado');
+                botaoExpandir.textContent = "Mostrar menos";
+            } else {
+                textoResumo.classList.add('resumo-truncado');
+                botaoExpandir.textContent = "Mostrar mais";
+            }
+        }
+
+        function toggleResultadoExpandido(idx) {
+            const texto = document.getElementById(`textoResultado-${idx}`);
+            const botao = document.getElementById(`botaoExpandirResultado-${idx}`);
+            if (!texto || !botao) return;
+
+            if (texto.classList.contains('resumo-truncado')) {
+                texto.classList.remove('resumo-truncado');
+                botao.textContent = 'Mostrar menos';
+            } else {
+                texto.classList.add('resumo-truncado');
+                botao.textContent = 'Mostrar mais';
+            }
+        }
+    </script>
+</body>
+</html>

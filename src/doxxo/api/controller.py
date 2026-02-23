@@ -170,6 +170,13 @@ async def home():
         conteudo_html = conteudo_html.replace("TAG_INSERCAO_URL_API", configuracoes.URL_API)
     return HTMLResponse(content=conteudo_html, status_code=200)
 
+@controller.get('/ref')
+async def home():
+    with open(f'./web/ref.html', 'r', encoding='utf-8') as arquivo:
+        conteudo_html = arquivo.read()
+        conteudo_html = conteudo_html.replace("TAG_INSERCAO_URL_API", configuracoes.URL_API)
+    return HTMLResponse(content=conteudo_html, status_code=200)
+
 @controller.get('/doxxo')
 async def pagina_busca():
     with open(f'./web/pagina.html', 'r', encoding='utf-8') as arquivo:
