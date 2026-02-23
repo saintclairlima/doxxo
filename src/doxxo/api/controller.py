@@ -1,3 +1,11 @@
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d \t %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+logger.info('Importando bibliotecas e módulos necessários...')
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, Query
@@ -8,21 +16,15 @@ from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 from doxxo.conteudo.banco_vetorial import BancoVetorial
 from doxxo.configuracoes.configuracoes import configuracoes
-import logging
 from doxxo.conteudo.reranqueador import ReRanqueador
 
+logger.info('Carregando banco vetorial e preparando coleções...')
 banco_vetorial = BancoVetorial(
     url_base_documentos=configuracoes.URL_DOCUMENTOS,
     url_banco_vetorial=configuracoes.URL_BANCO_VETORIAL
 )
 
 colecoes = defaultdict(list)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d \t %(message)s"
-)
-logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
