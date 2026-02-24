@@ -68,12 +68,23 @@
                             focus:border-blue-500 transition-all resize-none"
                     ></textarea>
                 </div>
-                <div class="flex justify-end mt-4">
+                <div class="flex justify-between items-start mt-4 gap-4 relative z-20">
+                    <details id="dropdownFiltros" class="w-full md:w-3/4 group">
+                        <summary class="cursor-pointer text-sm font-semibold text-blue-800 bg-blue-50/50 px-4 h-[42px] rounded-full select-none flex justify-between items-center hover:bg-blue-100 transition-colors border border-blue-100 shadow-sm list-none [&::-webkit-details-marker]:hidden">
+                            <span>Filtrar documentos <span id="contadorDocs" class="text-xs font-normal text-gray-500 ml-1">(...)</span></span>
+                            <span class="text-blue-600 text-xs font-bold group-open:rotate-180 transition-transform">▼</span>
+                        </summary>
+                        
+                        <div id="listaDocumentos" class="absolute left-0 md:w-3/4 top-full mt-2 bg-white border border-gray-200 shadow-xl rounded-xl max-h-64 overflow-y-auto custom-scrollbar p-3 space-y-1.5 z-50">
+                            <p class="text-sm text-gray-400 text-center py-4 animate-pulse">Carregando base de documentos...</p>
+                        </div>
+                    </details>
+
                     <button 
                         id="botaoBuscar"
                         type="submit"
-                        class="px-6 py-2 bg-blue-600 text-white rounded-full 
-                            hover:bg-blue-700 active:scale-95 transition-all shadow-sm">
+                        class="px-6 h-[42px] bg-blue-600 text-white rounded-full 
+                            hover:bg-blue-700 active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0">
                         Buscar Referências
                     </button>
                 </div>
@@ -157,9 +168,20 @@
 
             const listaResultados = document.querySelector('#listaResultados');
             listaResultados.innerHTML = '<div class="space-y-4">' + Array(3).fill('<div class="h-24 w-full loading-shimmer rounded-xl"></div>').join('') + '</div>';
+            
+            const checkboxesSelecionados = document.querySelectorAll('.doc-checkbox:checked');
+            const documentosSelecionados = Array.from(checkboxesSelecionados).map(cb => cb.value);
+            
+            let parametroFiltro = "";
+            if (documentosSelecionados.length > 0) {
+                const objetoFiltro = {
+                    "titulo": { "$in": documentosSelecionados }
+                };
+                parametroFiltro = `&filtros_metadados=${encodeURIComponent(JSON.stringify(objetoFiltro))}`;
+            }
 
             try {
-                const response = await fetch(`${URL_API}/doxxo/consulta?pergunta=${encodeURIComponent(pergunta)}&num_resultados=20&reranquear=false&colecao=referencias_cruzadas`);
+                const response = await fetch(`${URL_API}/doxxo/consulta?pergunta=${encodeURIComponent(pergunta)}&num_resultados=20&reranquear=false&colecao=referencias_cruzadas&colecao=dialogar${parametroFiltro}`);
                 const dados = await response.json();                
                 textosRecuperados = dados.map(d => `${d.metadata.titulo} - ${d.metadata.subtitulo}\n${d.document}`);
                 renderizarResultados(dados);
@@ -294,6 +316,42 @@
                 botao.textContent = 'Mostrar mais';
             }
         }
+
+        async function carregarDocumentos() {
+            const containerLista = document.getElementById('listaDocumentos');
+            const contadorDocs = document.getElementById('contadorDocs');
+            
+            try {
+                const response = await fetch(`${URL_API}/doxxo/listar-documentos?nome_colecao=dialogar&nome_colecao=referencias_cruzadas`);
+                const dados = await response.json();
+                
+                let todosDocumentos = [];
+                for (const documentos of Object.values(dados)) {
+                    todosDocumentos = todosDocumentos.concat(documentos);
+                }
+                
+                todosDocumentos = [...new Set(todosDocumentos)];
+                
+                contadorDocs.textContent = `(${todosDocumentos.length})`;
+                
+                let html = '';
+                todosDocumentos.forEach(doc => {
+                    html += `
+                        <label class="flex items-start gap-2.5 cursor-pointer text-xs text-gray-700 hover:text-blue-600 transition-colors py-1 pl-2 border-l-2 border-transparent hover:border-blue-300">
+                            <input type="checkbox" value="${doc}" checked class="shrink-0 mt-0.5 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer accent-[#19793b] doc-checkbox">
+                            <span class="leading-snug">${doc}</span>
+                        </label>
+                    `;
+                });
+                
+                containerLista.innerHTML = html;
+            } catch (error) {
+                contadorDocs.textContent = `(0)`;
+                containerLista.innerHTML = `<p class="text-red-500 text-sm p-4 text-center">Erro ao carregar documentos: ${error.message}</p>`;
+            }
+        }
+        
+        window.addEventListener('DOMContentLoaded', carregarDocumentos);
     </script>
 </body>
 </html>
