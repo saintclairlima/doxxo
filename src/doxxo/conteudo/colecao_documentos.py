@@ -64,9 +64,20 @@ class ColecaoDocumentosChromaDB(ColecaoDocumentos):
             else:
                 raise excecao
 
-    def consultar_documentos(self, termos_de_consulta: str, num_resultados: int=10) -> QueryResult:        
+    def consultar_documentos(self, termos_de_consulta: str, num_resultados: int=10, filtros_metadados=None, filtros_texto=None) -> QueryResult:        
         if not num_resultados: num_resultados = self.num_resultados
-        return self.colecao_documentos.query(query_texts=[termos_de_consulta], n_results=num_resultados, include=['metadatas', 'distances', 'documents'])
+        return self.colecao_documentos.query(
+            query_texts=[termos_de_consulta],
+            n_results=num_resultados,
+            where=filtros_metadados,
+            where_document=filtros_texto,
+            include=['metadatas', 'distances', 'documents'])
+
+    def listar_titulos_documentos(self) -> List[str]:
+        resultados = self.colecao_documentos.get()
+        metadados = resultados['metadatas']
+        titulos = [doc.get('titulo') for doc in metadados]
+        return list(set(titulos))
     
     def adicionar_documentos_colecao(self, documentos: Fragmento ) -> None:
         ids = [documento.id for documento in documentos]

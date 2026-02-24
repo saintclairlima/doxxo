@@ -6,12 +6,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 logger.info('Importando bibliotecas e módulos necessários...')
+import httpx
+import json
+
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, Query
-from typing import List
 from fastapi.responses import HTMLResponse
-import httpx
+from typing import List
 from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 from doxxo.conteudo.banco_vetorial import BancoVetorial
@@ -85,7 +87,14 @@ async def chat_health():
     return {"status": "ok"}
 
 @controller.get('/doxxo/consulta')
-async def consultar_documentos(request: Request, pergunta: str, colecao: List[str]| None = Query(None), num_resultados: int = 5, reranquear: bool=True):
+async def consultar_documentos(
+    request: Request,
+    pergunta: str,
+    colecao: List[str]| None = Query(None),
+    num_resultados: int = 5,
+    filtros_metadados=None,
+    filtros_texto=None,
+    reranquear: bool=True):
 
     if colecao is None or len(colecao) == 0:
         colecoes = list(request.app.state.colecoes_documentos.keys())
@@ -97,7 +106,9 @@ async def consultar_documentos(request: Request, pergunta: str, colecao: List[st
     for colecao in colecoes:
         resultado = request.app.state.colecoes_documentos[colecao].consultar_documentos(
             termos_de_consulta=pergunta, 
-            num_resultados=num_resultados
+            num_resultados=num_resultados,
+            filtros_metadados=json.loads(filtros_metadados) if filtros_metadados else None,
+            filtros_texto=json.loads(filtros_texto) if filtros_texto else None
         )
 
         ids = resultado["ids"][0]
@@ -157,6 +168,33 @@ async def sumarizar_conteudo(request: Request, conteudo_requisicao: SumarizacaoR
     except Exception as e:
         logger.error(f"Erro inesperado: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@controller.get('/doxxo/listar-conteudo')
+async def listar_conteudo():
+    nomes_colecoes = list(controller.state.colecoes_documentos.keys())
+    documentos = {}
+    for nome in nomes_colecoes:
+        colecao = controller.state.colecoes_documentos[nome]
+        documentos[nome] = colecao.listar_titulos_documentos()
+    return documentos
+
+@controller.get('/doxxo/listar-colecoes')
+async def listar_colecoes():
+    return {'colecoes': list(controller.state.colecoes_documentos.keys())}
+
+@controller.get('/doxxo/listar-documentos')
+async def listar_documentos(nome_colecao: List[str] = Query(None)):
+    documentos = {
+        nome: [] for nome in nome_colecao
+    }
+
+    for nome in nome_colecao:
+        colecao = controller.state.colecoes_documentos[nome]
+        documentos[nome] = colecao.listar_titulos_documentos()
+
+    if not any(documentos.values()):
+        raise HTTPException(status_code=404, detail="Nenhum documento encontrado para as coleções especificadas.")
+    return documentos
     
 @controller.get('/doxxo/documento')
 async def exibir_documento(url_documento: str = Query(None)):
