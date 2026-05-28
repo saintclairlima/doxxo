@@ -39,10 +39,15 @@ class ColecaoDocumentosChromaDB(ColecaoDocumentos):
         
         if fazer_log: logger.info(f'Inicializando banco vetorial (usando "{url_banco_vetorial}")...')
         self.banco_vetorial = PersistentClient(path=url_banco_vetorial)
+        self.gerador_embeddings = gerador_embeddings
 
         argumentos_colecao = {'name': nome_colecao}
-        if gerador_embeddings is not None:
+        if criar_colecao_automaticamente and gerador_embeddings is not None:
             argumentos_colecao['embedding_function'] = gerador_embeddings
+        elif gerador_embeddings is not None:
+            logger.info(
+                f'Coleção "{nome_colecao}" já existe; carregando sem reinicializar a função de embeddings para evitar conflito de configuração.'
+            )
 
         try:
             if fazer_log: logger.info(f'Carregando a coleção a ser usada ({nome_colecao})...')
@@ -54,6 +59,7 @@ class ColecaoDocumentosChromaDB(ColecaoDocumentos):
                     argumentos_colecao['metadata']['hnsw:space'] = hnsw_space
 
                 if gerador_embeddings is not None:
+                    argumentos_colecao['embedding_function'] = gerador_embeddings
                     argumentos_colecao['metadata']['modelo_embeddings'] = gerador_embeddings.nome_modelo
                     if gerador_embeddings.instrucao_modelo_embeddings:
                         argumentos_colecao['metadata']['instrucao_funcao_embeddings'] = gerador_embeddings.instrucao_modelo_embeddings
@@ -66,12 +72,25 @@ class ColecaoDocumentosChromaDB(ColecaoDocumentos):
 
     def consultar_documentos(self, termos_de_consulta: str, num_resultados: int=10, filtros_metadados=None, filtros_texto=None) -> QueryResult:        
         if not num_resultados: num_resultados = self.num_resultados
-        return self.colecao_documentos.query(
-            query_texts=[termos_de_consulta],
-            n_results=num_resultados,
-            where=filtros_metadados,
-            where_document=filtros_texto,
-            include=['metadatas', 'distances', 'documents'])
+        
+        # Se um gerador de embeddings foi fornecido, usa-o para embedar a consulta
+        # Isso evita conflitos de configuração ao carregar coleções existentes
+        if self.gerador_embeddings is not None:
+            query_embedding = self.gerador_embeddings([termos_de_consulta])
+            return self.colecao_documentos.query(
+                query_embeddings=query_embedding,
+                n_results=num_resultados,
+                where=filtros_metadados,
+                where_document=filtros_texto,
+                include=['metadatas', 'distances', 'documents'])
+        else:
+            # Se nenhum gerador de embeddings foi fornecido, tenta usar a função padrão da coleção
+            return self.colecao_documentos.query(
+                query_texts=[termos_de_consulta],
+                n_results=num_resultados,
+                where=filtros_metadados,
+                where_document=filtros_texto,
+                include=['metadatas', 'distances', 'documents'])
 
     def listar_titulos_documentos(self) -> List[str]:
         resultados = self.colecao_documentos.get()

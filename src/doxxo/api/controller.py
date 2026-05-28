@@ -189,6 +189,9 @@ async def listar_documentos(nome_colecao: List[str] = Query(None)):
     }
 
     for nome in nome_colecao:
+        if nome not in controller.state.colecoes_documentos:
+            logger.warning(f'Coleção "{nome}" não encontrada no banco vetorial.')
+            continue
         colecao = controller.state.colecoes_documentos[nome]
         documentos[nome] = colecao.listar_titulos_documentos()
 

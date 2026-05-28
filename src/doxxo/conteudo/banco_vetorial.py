@@ -2,11 +2,12 @@ import json
 from typing import List
 from threading import Lock
 import logging
+from doxxo.configuracoes.configuracoes import configuracoes
 
 from chromadb import PersistentClient
 
 from doxxo.conteudo.colecao_documentos import ColecaoDocumentosChromaDB
-from doxxo.conteudo.gerador_embedding import GeradorEmbeddings
+from doxxo.conteudo.gerador_embedding import GeradorEmbeddings, GeradorEmbeddingsGemini
 from doxxo.processamento_documentos.fragmentador import FragmentadorDocumentos
 from doxxo.processamento_documentos.models import Fragmento
 
@@ -63,13 +64,19 @@ class BancoVetorial:
         # mantém controle do que já foi criado para uso em outras coleções
         with self.lock: # (o lock evita condições de concorrência em situações multi-thread)
             if nome_modelo not in self.geradores_embeddings:
-                self.geradores_embeddings[nome_modelo] = GeradorEmbeddings(
-                    nome_modelo=nome_modelo,
-                    classe_modelo=classe_modelo,
-                    device=device,
-                    instrucao=instrucao,
-                    url_cache_modelos=url_cache_modelos
-                )
+                if nome_modelo == 'gemini-embedding-2':
+                    self.geradores_embeddings[nome_modelo] = GeradorEmbeddingsGemini(
+                        nome_modelo=nome_modelo,
+                        chave_api=configuracoes.chave_api_gemini
+                    )
+                else: 
+                    self.geradores_embeddings[nome_modelo] = GeradorEmbeddings(
+                        nome_modelo=nome_modelo,
+                        classe_modelo=classe_modelo,
+                        device=device,
+                        instrucao=instrucao,
+                        url_cache_modelos=url_cache_modelos
+                    )
         
         return self.geradores_embeddings[nome_modelo]
     
