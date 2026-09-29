@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
 
     logger.info("Carregando ReRanqueador...")
     reranker = ReRanqueador(
-        nome_modelo=configuracoes.MODELO_RERANKEAMENTO,
+        nome_modelo=configuracoes.MODELO_RERANQUEAMENTO,
         device='cpu'
     )
 
