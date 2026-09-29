@@ -32,12 +32,14 @@ colecoes = defaultdict(list)
 async def lifespan(app: FastAPI):
     logger.info("Carregando gerador de embeddings...")
     gerador_embeddings = banco_vetorial.carregar_gerador_embeddings(
-        nome_modelo=configuracoes.MODELO_EMBEDDINGS
+        nome_modelo=configuracoes.MODELO_EMBEDDINGS,
+        device='cpu'
     )
 
     logger.info("Carregando ReRanqueador...")
     reranker = ReRanqueador(
-        nome_modelo=configuracoes.MODELO_RERANKEAMENTO
+        nome_modelo=configuracoes.MODELO_RERANKEAMENTO,
+        device='cpu'
     )
 
     logger.info("Carregando interface ChromaDB...")
@@ -203,21 +205,21 @@ async def exibir_documento(url_documento: str = Query(None)):
     
 @controller.get('/')
 async def home():
-    with open(f'./web/pagina.html', 'r', encoding='utf-8') as arquivo:
+    with open(f'./web/pagina_icms.html', 'r', encoding='utf-8') as arquivo:
         conteudo_html = arquivo.read()
         conteudo_html = conteudo_html.replace("TAG_INSERCAO_URL_API", configuracoes.URL_API)
     return HTMLResponse(content=conteudo_html, status_code=200)
 
 @controller.get('/ref')
-async def home():
-    with open(f'./web/ref.html', 'r', encoding='utf-8') as arquivo:
+async def busca_referencias():
+    with open(f'./web/pagina_referencias.html', 'r', encoding='utf-8') as arquivo:
         conteudo_html = arquivo.read()
         conteudo_html = conteudo_html.replace("TAG_INSERCAO_URL_API", configuracoes.URL_API)
     return HTMLResponse(content=conteudo_html, status_code=200)
 
-@controller.get('/doxxo')
-async def pagina_busca():
-    with open(f'./web/pagina.html', 'r', encoding='utf-8') as arquivo:
+@controller.get('/icms')
+def busca_icms():
+    with open(f'./web/pagina_icms.html', 'r', encoding='utf-8') as arquivo:
         conteudo_html = arquivo.read()
         conteudo_html = conteudo_html.replace("TAG_INSERCAO_URL_API", configuracoes.URL_API)
     return HTMLResponse(content=conteudo_html, status_code=200)

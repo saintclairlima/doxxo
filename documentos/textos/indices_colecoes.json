@@ -56,5 +56,34 @@
                 "versao": "2024-03-06"
             }
         }
+    },
+    {
+        "colecao": "alernprev",
+        "indice_documentos": {
+            "alernprev_regulamento" : {
+                "url": "alernprev_regulamento.txt",
+                "titulo": "Regulamento do Plano de Previdência Complementar ALERNPrev",
+                "autor": "BB Previdência",
+                "fonte": "documentos/html/alernprev_regulamento.html",
+                "texto_articulado": true,
+                "versao": "2026-08-27"
+            },
+            "alernprev_glossario" : {
+                "url": "alernprev_glossario.txt",
+                "titulo": "Glossário do Plano de Previdência Complementar ALERNPrev",
+                "autor": "BB Previdência",
+                "fonte": "documentos/html/alernprev_glossario.html",
+                "texto_articulado": true,
+                "versao": "2026-08-27"
+            },
+            "alernprev_faq" : {
+                "url": "alernprev_faq.txt",
+                "titulo": "FaQ Plano de Previdência Complementar ALERNPrev",
+                "autor": "BB Previdência",
+                "fonte": "documentos/html/alernprev_faq.html",
+                "texto_articulado": true,
+                "versao": "2026-08-27"
+            }
+        }
     }
 ]
